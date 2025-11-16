@@ -6,6 +6,8 @@ pwn.college **does NOT use traditional remote network connections** like `remote
 
 Instead, pwn.college uses **SSH access to Docker containers**:
 
+- not need run it in local.
+
 ### Running Exploit Scripts:
 
 For pwn.college challenges, your pwntools scripts should use:

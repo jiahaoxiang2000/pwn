@@ -1,0 +1,115 @@
+# Compiled binaries
+*.o
+*.out
+*.exe
+*.elf
+*.bin
+*.so
+*.dll
+*.dylib
+a.out
+
+# Core dumps
+core
+core.*
+*.core
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv
+pip-log.txt
+pip-delete-this-directory.txt
+.pytest_cache/
+
+# IDEs and Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# GDB
+.gdb_history
+peda-session-*.txt
+.pwndbg/
+
+# Pwntools
+.pwntools-cache-*/
+
+# Radare2
+.r2/
+
+# IDA Pro
+*.id0
+*.id1
+*.id2
+*.nam
+*.til
+*.idb
+*.i64
+
+# Ghidra
+*.gpr
+*.lock
+*.rep/
+
+# Binary Ninja
+*.bndb
+
+# CTF artifacts
+flag.txt
+*.flag
+*flag*
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.swp
+*.log
+
+# Exploit development
+exploit
+exploit_*
+payload
+payload_*
+shellcode
+
+# Sensitive data
+*.key
+*.pem
+*.crt
+credentials.*
+secrets.*
+.env
+
+# Archives
+*.tar
+*.tar.gz
+*.tgz
+*.zip
+*.rar
+*.7z
+
+# Debugging and analysis
+*.pcap
+*.pcapng
+strace.out
+ltrace.out
+
+# Node modules (for web challenges)
+node_modules/
+package-lock.json
+
+# Build directories
+build/
+dist/
+target/

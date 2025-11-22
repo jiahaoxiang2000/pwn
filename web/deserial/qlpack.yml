@@ -1,0 +1,7 @@
+---
+library: false
+warnOnImplicitThis: false
+name: deserial-java
+version: 0.0.1
+dependencies:
+  codeql/java-all: ^7.7.3

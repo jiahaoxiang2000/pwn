@@ -16,6 +16,7 @@ An excellent comprehensive resource on exploiting deserialization vulnerabilitie
 - **Link**: [PDF Presentation](https://owasp.org/www-chapter-stuttgart/assets/slides/2024-12-10_Exploiting_deserialization_vulnerabilities_in_recent_Java_versions.pdf)
 
 This presentation covers modern techniques for exploiting Java deserialization flaws, including:
+
 - Understanding Java serialization mechanisms
 - Gadget chains and how they work
 - Exploitation techniques for recent Java versions
@@ -24,6 +25,7 @@ This presentation covers modern techniques for exploiting Java deserialization f
 ## Key Concepts
 
 Java deserialization attacks typically rely on:
+
 - **Gadget Chains**: Sequences of method calls that can be triggered during deserialization
 - **Magic Methods**: Special methods like `readObject()` that are automatically invoked
 - **Library Dependencies**: Common libraries (Apache Commons, Spring, etc.) that contain exploitable gadgets
@@ -32,3 +34,7 @@ Java deserialization attacks typically rely on:
 
 - **ysoserial**: Java deserialization payload generator
 - **Java Unmarshaller Security**: Tools for testing deserialization endpoints
+
+## Reference
+
+- [finding gadgets like its 2022](https://www.synacktiv.com/publications/finding-gadgets-like-its-2022.html)
